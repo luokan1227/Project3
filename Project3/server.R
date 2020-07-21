@@ -1,9 +1,13 @@
 # Kan Luo    ST558 Project3   7/18/2020
-library(readxl)
 library(shiny)
 library(shinydashboard)
+library(plotly)
 library(dplyr)
 library(ggplot2)
+library(knitr)
+library(plyr)
+library(DT)
+library(readxl)
 library(httr)
 
 #Readin data from my Github url address
@@ -16,10 +20,6 @@ antibody <- read_excel(tf)
 
 shinyServer(function(input, output, session)  {
     
-    url <- a("RV144 Trial", href="https://www.hivresearch.org/rv144-trial")
-    output$tab <- renderUI({
-        tagList("URL link:", url)
-    })
     
     ########### Code for Exploration Tab ##################
     
@@ -112,7 +112,7 @@ shinyServer(function(input, output, session)  {
     #Screeplot for 1st sub-tab
     output$pov <- renderPlot({
         newData2 <- getData2()
-        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated)
+        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated, Lmutated)
         ScreePlot <- prcomp(anti1, center = TRUE, scale = TRUE)
         screeplot(ScreePlot, type="lines")
     })
@@ -120,7 +120,7 @@ shinyServer(function(input, output, session)  {
     #Table for 1st  sub-tab
     output$povtable <- renderTable({
         newData2 <- getData2()
-        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated)
+        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated, Lmutated)
         ScreePlot <- prcomp(anti1, center = TRUE, scale = TRUE)
         ScreePlot[[2]]
     })
@@ -145,22 +145,75 @@ shinyServer(function(input, output, session)  {
     #Biplot
     output$bip <- renderPlot({
         newData2 <- getData2()
-        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated)
+        anti1 <- newData2 %>% select(HV, HCDR3, Hmuated, Lmutated)
         PC1 <- prcomp(anti1, center = TRUE, scale = TRUE)
+        #Use if condition to out put user selected algorithm of biplot
         if(input$hv && input$hcdr3){
             biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,2), cex=1.2)} else if
         (input$hv && input$hmuated) {
             biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,3), cex=1.2)} else if
         (input$hcdr3 && input$hmuated){
-            biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(2,3), cex=1.2)
-        }
+            biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(2,3), cex=1.2)} else if
+        (input$hv && input$lmutated){
+            biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,4), cex=1.2)} else if
+        (input$hcdr3 && input$lmutated){
+            biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(2,4), cex=1.2)} else if
+        (input$hmuated && input$lmutated){
+            biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(3,4), cex=1.2)
+        } #Close all if conditions
     })
     
-
+###############Code for Model Tab##################
+    #Create click plot
+    output$mutclick <- renderPlot({
+        plot(antibody$Hmuated, antibody$Lmutated, xlab = "H_Muatation", ylab = "L_mutation")
+    })
+    #Show Heavy chain mutation rate and light chain mutation rate been selected
+    output$info <- renderText({
+        paste0("H_Mutation=", input$plot_click$x, "\nL_Mutation=", input$plot_click$y)
+    })
     
+    #setup model data
+    modeldata <- antibody %>% select(HV, HCDR3, Hmuated, Lmutated, Clone, Reactivity)
     
+    #Clone model
+    clonemodel<- glm(Clone ~ HV + HCDR3 + Hmuated + Lmutated, data=modeldata, family = "binomial")
     
+    #Env reactivity model
+    envreactmodel<- glm(Reactivity ~ HV + HCDR3 + Hmuated + Lmutated, data=modeldata, family = "binomial")
     
+    #Export Model info output
+    output$coef <- renderTable({
+        if(input$choosemodel == "Clone Model"){
+            data.frame(as.list(coef(clonemodel)))
+        } else {data.frame(as.list(coef(envreactmodel)))}
+    })
+    
+    #Export the predict results
+    output$predictresult <- renderText({
+        #if choose the clone model
+        if(input$choosemodel == "Clone Model"){
+            #predict clone model by input
+            predictresult <- predict(clonemodel, newdata = data.frame(HV = input$heavyv, HCDR3 = input$modelhcdr3, Hmuated = input$plot_click$x, Lmutated = input$plot_click$y), type = "response", se.fit = TRUE)
+            #output predict results by words
+            if(predictresult[1] < 0.5) {
+                response = "Non-Clone Lineage Related"} else{
+                    response = "Clone Lineage Related"
+                }
+            paste(response)
+            
+        } else if(input$choosemodel == "Env Reactivity Model"){
+            #predict env reactivity model by inputs
+            predictresult2 <- predict(envreactmodel, newdata = data.frame(HV = input$heavyv, HCDR3 = input$modelhcdr3, Hmuated = input$plot_click$x, Lmutated = input$plot_click$y), type = "response", se.fit = TRUE)
+            #Output predict results by words
+            #In our data, most of the antibodies were isolated through antigen specific sort, tend to be envelope positive, the data set is kind of biased. So I adjust to <0.8 to make sure there is a fair ratio of envelope negative prediction come out for better show of function.
+            if(predictresult2[1] < 0.8) {
+                response2 = "HIV Envelope Negative"} else{
+                    response2 = "HIV Envelope Positive"
+                }
+            paste(response2)
+        }
+    })
     
     
 ##################Code for Data Tab##################################
@@ -178,16 +231,4 @@ shinyServer(function(input, output, session)  {
         content = function(file){write.csv(getData3(), file, row.names = FALSE)}
     )
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
 })
