@@ -20,6 +20,11 @@ antibody <- read_excel(tf)
 
 shinyServer(function(input, output, session)  {
     
+    #Setup url link
+    url <- a("RV144", href="https://www.hivresearch.org/rv144-trial")
+    output$tab <- renderUI({
+        tagList("RV144 Trial:", url)
+    })
     
     ########### Code for Exploration Tab ##################
     
