@@ -117,6 +117,19 @@ shinyServer(function(input, output, session)  {
         screeplot(ScreePlot, type="lines")
     })
     
+    #download scree plot
+    output$povdownload <- downloadHandler(
+        filename = function(){paste(input$ptid2, "Scree Plot.png")},
+        content = function(file){
+            png(file)
+            newData2 <- getData2()
+            anti1 <- newData2 %>% select(HV, HCDR3, Hmuated, Lmutated)
+            ScreePlot <- prcomp(anti1, center = TRUE, scale = TRUE)
+            screeplot(ScreePlot, type="lines")
+            dev.off()
+        }
+    )
+    
     #Table for 1st  sub-tab
     output$povtable <- renderTable({
         newData2 <- getData2()
@@ -162,6 +175,39 @@ shinyServer(function(input, output, session)  {
             biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(3,4), cex=1.2)
         } #Close all if conditions
     })
+    
+    #Download biplot
+    output$bipdownload <- downloadHandler(
+        filename = function(){paste(input$ptid2, "BIP.png")},
+        content = function(file){
+            png(file)
+            newData2 <- getData2()
+            anti1 <- newData2 %>% select(HV, HCDR3, Hmuated, Lmutated)
+            PC1 <- prcomp(anti1, center = TRUE, scale = TRUE)
+            #Use if condition to out put user selected algorithm of biplot
+            if(input$hv && input$hcdr3){
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,2), cex=1.2)} else if
+            (input$hv && input$hmuated) {
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,3), cex=1.2)} else if
+            (input$hcdr3 && input$hmuated){
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(2,3), cex=1.2)} else if
+            (input$hv && input$lmutated){
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(1,4), cex=1.2)} else if
+            (input$hcdr3 && input$lmutated){
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(2,4), cex=1.2)} else if
+            (input$hmuated && input$lmutated){
+                biplot(PC1, xlabs=rep(".", nrow(newData2)), choices=c(3,4), cex=1.2)
+            } 
+            dev.off()
+        }
+    )
+    
+    
+    
+    
+    
+    
+
     
 ###############Code for Model Tab##################
     #Create click plot

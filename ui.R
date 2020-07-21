@@ -53,7 +53,7 @@ dashboardPage(
                                h1("Introduce APP"),
                                box(background = "blue", width = 12,
                                    h4(strong("Data Exploration Tab"),": You can select PTID to see antibody number table, Ig isotype plot and HCDR3 vs H_mutation rate plot by animal subjects. You can also select", em("By sample tissue type"), "box and", em("By HIV envelope reactivity"), "box for further analysis. Plots can be downloaded by the button on the plot, the dataset used for creating table/plots can be downloaded by ", em("Download Data Set"), "button. "),
-                                   h4(strong("PCA Tab"), ": You can choose which animal you want to look at by selecting PTID. Plot of the proportion of 4 variables that can explain the variability of the data set is shown by PTID. You can select 2 of 4 variables to see the biplot of principal components. "),
+                                   h4(strong("PCA Tab"), ": You can choose which animal you want to look at by selecting PTID. Plot of the proportion of 4 variables that can explain the variability of the data set is shown by PTID. You can select 2 of 4 variables to see the biplot of principal components. Plots can be downloaded by the button under the plot"),
                                    h4(strong("Modeling Tab"), ": In this tab, you can select the value of 4 variables and use them to predict the antibody feature. One model can be used to predict the antibody is clone lineage related or not, another model can predict the antibody is an HIV-antibody or not."),
                                    h4(strong("Data View/Download"),": You can view and download whole antibody data set used in this app.")))
                     )),  #end of first tab content
@@ -126,13 +126,15 @@ dashboardPage(
                                             fluidRow(
                                                 column(12,
                                                        plotOutput("pov"),
+                                                       downloadButton("povdownload", "Download Plot"),
                                                        tableOutput("povtable"),
                                                        textOutput("povexp"))
                                             )),  #close the 1st sub-tabPanel
                                    tabPanel(uiOutput("subt5"),
                                             fluidRow(
                                                 column(12,
-                                                       plotOutput("bip"))
+                                                       plotOutput("bip"),
+                                                       downloadButton("bipdownload", "Download Plot"),)
                                             )
                                    )
                                )) #close plot column
